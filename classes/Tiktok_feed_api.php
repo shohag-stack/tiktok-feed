@@ -2,7 +2,7 @@
 
 class Tiktok_feed_api {
 
-    public static function get_tiktok_athorization_code(){
+public static function get_tiktok_athorization_code(){
         // This function should return the TikTok authorization code URL
         // Replace with actual logic to generate or retrieve the authorization code
         $client_key = 'sbawrbwjim6xwa0uap';
@@ -17,74 +17,82 @@ class Tiktok_feed_api {
             'state' => $state,// 
         ]);
     }
-    public static function get_access_token($code){
-        // This function should exchange the authorization code for an access token
-        $client_key = 'sbawrbwjim6xwa0uap';
-        $client_secret = 'HgGyN0jtq0OEBScwfixxxswwv24qUijj';
-        $redirect_uri = site_url('/tiktok-callback/');
-        $response = wp_remote_post('https://open.tiktokapis.com/v2/oauth/token/', [
-            'body' => [
-                'client_key' => $client_key,
-                'client_secret' => $client_secret,
-                'code' => $code,
-                'grant_type' => 'authorization_code',
-                'redirect_uri' => $redirect_uri, 
-                
-            ]
-        ]);
+public static function get_access_token($code) {
+    $client_key = 'sbawrbwjim6xwa0uap';
+    $client_secret = 'HgGyN0jtq0OEBScwfixxxswwv24qUijj';
+    $redirect_uri = site_url('/tiktok-callback/');
 
-        
-        if (is_wp_error($response)) {
-            return new WP_Error('tiktok_api_error', __('Failed to retrieve access token.', 'tiktok-feed'));
-        };
-        $body = wp_remote_retrieve_body($response);
-        error_log('TikTok Token Response: ' . $body);
-        $data = json_decode($body, true);
-        if (isset($data['error'])) {
-            return new WP_Error('tiktok_api_error', __('Error retrieving access token: ' . $data['error'], 'tiktok-feed'));
-        }
+    // Exchange code for access token
+    $response = wp_remote_post('https://open.tiktokapis.com/v2/oauth/token/', [
+        'body' => [
+            'client_key' => $client_key,
+            'client_secret' => $client_secret,
+            'code' => $code,
+            'grant_type' => 'authorization_code',
+            'redirect_uri' => $redirect_uri
+        ]
+    ]);
 
-        if (!empty($data['access_token'])) {
-            $access_token = $data['access_token'];
-            update_option('tiktok_access_token', $data['access_token']);
-            update_option('tiktok_open_id', $data['open_id']);
-
-            // Fetch user info
-        $user_info_response = wp_remote_post('https://open.tiktokapis.com/v2/user/info/', [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $access_token,
-                'Content-Type'  => 'application/json'
-            ],
-            'body' => [
-                'fields' => 'open_id', 'union_id', 'avatar_url', 'display_name'
-            ]
-        ]);
-
-        if (!is_wp_error($user_info_response)) {
-            $user_info_data = json_decode(wp_remote_retrieve_body($user_info_response), true);
-            error_log('TikTok User Info: ' . print_r($user_info_data, true));
-            if (!empty($user_info_data['data']['user']['avatar_url'])) {
-                update_option('tiktok_user_avatar', $user_info_data['data']['user']['avatar_url']);
-                update_option('tiktok_user_name', $user_info_data['data']['user']['display_name']);
-            }
-        }
-        }
-        
+    if (is_wp_error($response)) {
+        return new WP_Error('tiktok_api_error', __('Failed to retrieve access token.', 'tiktok-feed'));
     }
-    public static function render_video() {
+
+    $body = wp_remote_retrieve_body($response);
+    error_log('TikTok Token Response: ' . $body);
+
+    $data = json_decode($body, true);
+
+    if (empty($data['access_token'])) {
+        return new WP_Error('tiktok_api_error', __('Error retrieving access token: ' . json_encode($data), 'tiktok-feed'));
+    }
+
+    // Save access token and open_id
+    $access_token = sanitize_text_field($data['access_token']);
+    $open_id = sanitize_text_field($data['open_id']);
+    update_option('tiktok_access_token', $access_token);
+    update_option('tiktok_open_id', $open_id);
+
+    // Fetch user info
+    $user_info_response = wp_remote_post('https://open.tiktokapis.com/v2/user/info/', [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $access_token,
+            'Content-Type'  => 'application/json'
+        ],
+        'body' => wp_json_encode([
+            'open_id' => $open_id,
+            'fields' => 'display_name,avatar_url'
+        ])
+    ]);
+
+    if (!is_wp_error($user_info_response)) {
+        $user_info_data = json_decode(wp_remote_retrieve_body($user_info_response), true);
+        error_log('TikTok User Info: ' . print_r($user_info_data, true));
+
+        if (!empty($user_info_data['data']['user'])) {
+            update_option('tiktok_user_avatar', sanitize_text_field($user_info_data['data']['user']['avatar_url']));
+            update_option('tiktok_user_name', sanitize_text_field($user_info_data['data']['user']['display_name']));
+        }
+    }
+
+    return $access_token;
+    }
+public static function render_video() {
         $token = get_option('tiktok_access_token');
          if (empty($token)) {
         return '<p>Please connect your TikTok account first.</p>';
      }
+
+        $open_id = get_option('tiktok_open_id'); // Make sure this is set after authentication
 
         $response = wp_remote_post('https://open.tiktokapis.com/v2/video/list/', [
         'headers' => [
             'Authorization' => 'Bearer ' . $token,
             'Content-Type'  => 'application/json'
         ],
-        'body' => [
-            'fields' => 'id,title,video_description,duration,cover_image_url,share_url,embed_link'
-        ]
+        'body' => wp_json_encode([
+            'open_id' => $open_id,
+            'fields' => ['id', 'title', 'video_description', 'duration', 'cover_image_url', 'share_url', 'embed_link']
+        ])
         ]);
 
          if (is_wp_error($response)) {
@@ -120,7 +128,6 @@ class Tiktok_feed_api {
          $output .= '</div>';
          return $output;
 }
-
 }
 
 ?>

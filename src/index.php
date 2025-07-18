@@ -4,8 +4,9 @@ require_once plugin_dir_path(__FILE__) . '/../classes/Tiktok_feed_api.php';
 $token = get_option('tiktok_access_token');
 $username = get_option('tiktok_user_name');
 $avatar = get_option('tiktok_user_avatar');
+$openid = get_option('tiktok_open_id');
 
-var_dump($username, $avatar, $token);
+var_dump($username, $avatar,$openid, $token );
 
 
 if (isset($_GET['disconnected'])) {
