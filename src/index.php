@@ -32,6 +32,7 @@ if (isset($_GET['disconnected'])) {
     <?php else: ?>
         <a href="<?php echo esc_url(Tiktok_feed_api::get_tiktok_athorization_code()) ?>" class="button button-primary">
             <?php esc_html_e("Connect TikTok", "tiktok-feed"); ?>
+            
         </a>
     <?php endif; ?>
 </div>
