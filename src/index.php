@@ -6,9 +6,6 @@ $username = get_option('tiktok_user_name');
 $avatar = get_option('tiktok_user_avatar');
 $openid = get_option('tiktok_open_id');
 
-var_dump($username, $avatar,$openid, $token );
-
-
 if (isset($_GET['disconnected'])) {
     echo '<div class="notice notice-success"><p>✅ TikTok account disconnected successfully.</p></div>';
 }

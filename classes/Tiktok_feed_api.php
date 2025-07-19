@@ -5,7 +5,7 @@ class Tiktok_feed_api {
 public static function get_tiktok_athorization_code(){
         // This function should return the TikTok authorization code URL
         // Replace with actual logic to generate or retrieve the authorization code
-        $client_key = 'sbawrbwjim6xwa0uap';
+        $client_key = 'sbawnc11g9f8qzrl7q';
         $redirect_uri = site_url('/tiktok-callback/');
         $state = wp_create_nonce('tiktok_oauth_state');
         
@@ -18,8 +18,8 @@ public static function get_tiktok_athorization_code(){
         ]);
     }
 public static function get_access_token($code) {
-    $client_key = 'sbawrbwjim6xwa0uap';
-    $client_secret = 'HgGyN0jtq0OEBScwfixxxswwv24qUijj';
+    $client_key = 'sbawnc11g9f8qzrl7q';
+    $client_secret = 'HXhPve0gmb0Iz0McsUsCN92ODYGjskEI';
     $redirect_uri = site_url('/tiktok-callback/');
 
     // Exchange code for access token
@@ -53,15 +53,11 @@ public static function get_access_token($code) {
     update_option('tiktok_open_id', $open_id);
 
     // Fetch user info
-    $user_info_response = wp_remote_post('https://open.tiktokapis.com/v2/user/info/', [
+    $user_info_response = wp_remote_get('https://open.tiktokapis.com/v2/user/info/?fields=display_name,avatar_url', [
         'headers' => [
             'Authorization' => 'Bearer ' . $access_token,
             'Content-Type'  => 'application/json'
-        ],
-        'body' => wp_json_encode([
-            'open_id' => $open_id,
-            'fields' => 'display_name,avatar_url'
-        ])
+        ]
     ]);
 
     if (!is_wp_error($user_info_response)) {
@@ -84,15 +80,11 @@ public static function render_video() {
 
         $open_id = get_option('tiktok_open_id'); // Make sure this is set after authentication
 
-        $response = wp_remote_post('https://open.tiktokapis.com/v2/video/list/', [
+        $response = wp_remote_post('https://open.tiktokapis.com/v2/video/list/?fields=cover_image_url,id,title,embed_link', [
         'headers' => [
             'Authorization' => 'Bearer ' . $token,
             'Content-Type'  => 'application/json'
         ],
-        'body' => wp_json_encode([
-            'open_id' => $open_id,
-            'fields' => ['id', 'title', 'video_description', 'duration', 'cover_image_url', 'share_url', 'embed_link']
-        ])
         ]);
 
          if (is_wp_error($response)) {
